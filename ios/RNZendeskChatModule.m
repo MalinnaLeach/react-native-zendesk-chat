@@ -223,3 +223,13 @@ RCT_EXPORT_METHOD(areAgentsOnline:
 }
 
 @end
+
+@interface ZendeskChatMessageCounter ()
+@end
+
+@implementation ZendeskChatMessageCounter
+
+RCT_EXPORT_MODULE(ZendeskChatMessageCounter);
+RCT_EXPORT_VIEW_PROPERTY(unreadMessages, NSArray);
+
+@end

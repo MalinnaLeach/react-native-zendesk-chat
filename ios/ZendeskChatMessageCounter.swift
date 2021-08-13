@@ -2,6 +2,7 @@ import ChatProvidersSDK
 import ChatSDK
 import MessagingSDK
 
+@objc(ZendeskChatMessageCounter)
 final class ZendeskChatMessageCounter: NotificationCenterObserver {
     init() {
         Messaging.instance.delegate = self
