@@ -119,6 +119,7 @@ final class ZendeskChatMessageCounter: NotificationCenterObserver {
         chat.connectionProvider.disconnect()
     }
 
+    @objc(connectToChat)
     func connectToChat() {
         guard isActive else { return }
         connect()
