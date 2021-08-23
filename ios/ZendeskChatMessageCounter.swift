@@ -3,8 +3,16 @@ import ChatSDK
 import MessagingSDK
 
 @objc(ZendeskChatMessageCounter)
-final class ZendeskChatMessageCounter: NotificationCenterObserver {
-    init() {
+final class ZendeskChatMessageCounter: NSObject, NotificationCenterObserver {
+
+    {
+    func messaging(_ messaging: Messaging, didPerformEvent event: MessagingUIEvent, context: Any?) {
+    }
+    
+    func messaging(_ messaging: Messaging, shouldOpenURL url: URL) -> Bool {
+    }
+
+    override init() {
         Messaging.instance.delegate = self
         guard let chat = Chat.instance else { return }
         messageCounter = ZendeskChatMessageCounter(chat: chat)
