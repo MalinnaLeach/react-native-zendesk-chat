@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.homepage     = package['homepage']
   s.platform     = :ios, '10'
   s.source       = { git: 'https://github.com/MalinnaLeach/react-native-zendesk-chat.git', tag: "v#{s.version}" }
-  s.source_files = 'ios/*.{h,m}'
+  s.source_files = 'ios/*.{h,m,swift}'
   s.static_framework = true
 
   s.framework    = 'Foundation'
