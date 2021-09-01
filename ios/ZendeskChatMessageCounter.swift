@@ -19,6 +19,10 @@ final class ZendeskChatMessageCounter: RCTEventEmitter, NotificationCenterObserv
       }
     }
     
+    open override func supportedEvents() -> [String]! {
+      return EventEmitterSuported.allCases.map({ $0.description })
+    }
+    
     /// Called every time the unread message count has changed
     var onUnreadMessageCountChange: ((Int) -> Void)?
     
