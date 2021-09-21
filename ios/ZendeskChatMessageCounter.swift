@@ -4,34 +4,26 @@ import MessagingSDK
 import CommonUISDK
 import React
 
+public extension Notification.Name {
+    static let zendeskChatUpdate = Notification.Name("ZendeskChatUpdate")
+}
+
 @objc(ZendeskChatMessageCounter)
 final class ZendeskChatMessageCounter: RCTEventEmitter, NotificationCenterObserver {
-    
     public override static func requiresMainQueueSetup() -> Bool {
-      return false
+        return false
     }
     
     internal enum EventEmitterSuported: String, CaseIterable, CustomStringConvertible {
-      case UnreadMessageCountChange
-      
-      var description: String {
-        return rawValue
-      }
+        case UnreadMessageCountChange
+        
+        var description: String {
+            return rawValue
+        }
     }
     
     public override func supportedEvents() -> [String]! {
-      return EventEmitterSuported.allCases.map({ $0.description })
-    }
-    
-    /// Called every time the unread message count has changed
-    var onUnreadMessageCountChange: ((Int) -> Void)?
-    
-    var isActive = false {
-        didSet {
-            if isActive == false {
-                stopMessageCounter()
-            }
-        }
+        return EventEmitterSuported.allCases.map({ $0.description })
     }
     
     // MARK: Observations
@@ -42,7 +34,7 @@ final class ZendeskChatMessageCounter: RCTEventEmitter, NotificationCenterObserv
     private var observations: ObserveBehaviours?
     
     // MARK: Chat
-    private let chat: Chat
+    private var chat: Chat
     private var isChatting: Bool? {
         guard connectionStatus == .connected else {
             return nil
@@ -61,8 +53,11 @@ final class ZendeskChatMessageCounter: RCTEventEmitter, NotificationCenterObserv
     // MARK: Unread messages
     private var lastSeenMessage: ChatLog?
     private var unreadMessages: [ChatLog]? {
+        if lastSeenMessage == nil {
+            updateLastSeenMessage()
+        }
+        
         guard
-            isActive && isChatting == true,
             let chatState = chatState,
             let lastSeenMessage = lastSeenMessage else {
             return nil
@@ -74,12 +69,8 @@ final class ZendeskChatMessageCounter: RCTEventEmitter, NotificationCenterObserv
     
     private var numberOfUnreadMessages = 0 {
         didSet {
-            if oldValue != numberOfUnreadMessages && isActive {
-                onUnreadMessageCountChange?(numberOfUnreadMessages)
-                sendEvent(withName: EventEmitterSuported.UnreadMessageCountChange.description,
+            sendEvent(withName: EventEmitterSuported.UnreadMessageCountChange.description,
                           body: ["count": numberOfUnreadMessages])
-                
-            }
         }
     }
     
@@ -94,27 +85,42 @@ final class ZendeskChatMessageCounter: RCTEventEmitter, NotificationCenterObserv
         }
         self.chat = chat
         super.init()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            self?.connectToChat()
+        }
     }
     
-    // MARK: Connection life-cycle
+    deinit {
+        debugPrint(#function, #file)
+    }
+    
+    // MARK: Connection life-cycle.
     @objc(connectToChat)
     func connectToChat() {
-        guard isActive else { return }
+        updateChatReference()
         connect()
         startObservingChat()
+        startMessageCounterIfNeeded()
     }
     
-    @objc(getNumberOfUnreadMessages)
-    public func getNumberOfUnreadMessages() -> Int {
-        return numberOfUnreadMessages
+    @objc
+    public func getNumberOfUnreadMessages(_ callback: RCTResponseSenderBlock) {
+        callback([numberOfUnreadMessages])
     }
     
     // MARK: Message counter
     func startMessageCounterIfNeeded() {
-        guard isChatting == true && !isActive else { return }
-        
-        lastSeenMessage = chatState?.logs.last
+        updateLastSeenMessage()
         updateUnreadMessageCount()
+    }
+    
+    func updateLastSeenMessage() {
+        if let lastLogId = UserDefaults.standard.value(forKey: "ZendeskLastLogId") as? String {
+            lastSeenMessage = chatState?.logs.filter({ $0.id == lastLogId }).first
+        } else {
+            lastSeenMessage = chatState?.logs.last
+        }
     }
     
     func stopMessageCounter() {
@@ -126,6 +132,11 @@ final class ZendeskChatMessageCounter: RCTEventEmitter, NotificationCenterObserv
 
 // MARK: - Private methods
 private extension ZendeskChatMessageCounter {
+    func updateChatReference() {
+        guard let chat = Chat.instance else { return }
+        self.chat = chat
+    }
+    
     func updateUnreadMessageCount() {
         numberOfUnreadMessages = unreadMessages?.count ?? 0
     }
@@ -141,6 +152,7 @@ private extension ZendeskChatMessageCounter {
     
     func disconnect() {
         chat.connectionProvider.disconnect()
+        unobserveNotifications()
     }
     
     // To stop observing we have to call unobserve on each observer
@@ -151,25 +163,18 @@ private extension ZendeskChatMessageCounter {
     }
     
     func observeConnectionStatus() -> ObserveBehaviour {
-        chat.connectionProvider.observeConnectionStatus { [weak self] (status) in
-            guard let self = self else { return }
-            guard status == .connected else { return }
-            _ = self.observeChatState()
+        return chat.connectionProvider.observeConnectionStatus { (status) in
+            debugPrint("connection status: \(status)")
         }.asBehaviour()
     }
     
+    @discardableResult
     private func observeChatState() -> ObserveBehaviour {
-        chat.chatProvider.observeChatState { [weak self] (state) in
+        return chat.chatProvider.observeChatState { [weak self] (state) in
             guard let self = self else { return }
             guard self.connectionStatus == .connected else { return }
             
-            if state.isChatting == false {
-                self.stopMessageCounter()
-            }
-            
-            if self.isActive {
-                self.updateUnreadMessageCount()
-            }
+            self.updateUnreadMessageCount()
         }.asBehaviour()
     }
     
@@ -184,6 +189,18 @@ private extension ZendeskChatMessageCounter {
         observeNotification(withName: Chat.NotificationChatEnded) { [weak self] _ in
             self?.stopMessageCounter()
         }
+        
+        observeNotification(withName: Chat.NotificationMessageReceived) { [weak self] _ in
+            self?.updateUnreadMessageCount()
+        }
+        
+        observeNotification(withName: .zendeskChatUpdate) { _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                self?.stopMessageCounter()
+                self?.connectToChat()
+            }
+        }
+        
         observeApplicationEvents()
     }
     
@@ -193,15 +210,7 @@ private extension ZendeskChatMessageCounter {
         }
         
         observeNotification(withName: UIApplication.willEnterForegroundNotification) { [weak self] _ in
-            if self?.isActive == true {
-                self?.connect()
-            }
-        }
-        
-        observeNotification(withName: Chat.NotificationChatEnded) { [weak self] _ in
-            if self?.isActive == true {
-                self?.stopMessageCounter()
-            }
+            self?.connect()
         }
     }
 }
