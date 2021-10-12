@@ -150,10 +150,18 @@ RCT_EXPORT_METHOD(startChat:(NSDictionary *)options) {
 
     dispatch_sync(dispatch_get_main_queue(), ^{
 
+        UIColor *themeColor;
+        if (@available(iOS 11.0, *)) {
+            themeColor = [UIColor colorNamed:@"madeBlack"];
+        } else {
+            themeColor = [UIColor blackColor];
+        }
+        
         ZDKChat.instance.configuration = [self applyVisitorInfo:options
                                                      intoConfig: _visitorAPIConfig ?: [[ZDKChatAPIConfiguration alloc] init]];
 
         ZDKChatConfiguration * chatConfig = [self chatConfigurationFromConfig:options];
+        [ZDKCommonTheme currentTheme].primaryColor = themeColor;
 
         NSError *error = nil;
         NSArray *engines = @[
@@ -173,13 +181,15 @@ RCT_EXPORT_METHOD(startChat:(NSDictionary *)options) {
             NSLog(@"[RNZendeskChatModule] Internal Error building ZDKMessagingUI %@",error);
             return;
         }
-
-        viewController.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle: options[@"localizedDismissButtonTitle"] ?: @"Close"
-                                                                                           style: UIBarButtonItemStylePlain
-                                                                                          target: self
-                                                                                          action: @selector(dismissChatUI)];
-
+        
+        viewController.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"chevron_dowm"]
+                                                                                           style:UIBarButtonItemStylePlain
+                                                                                          target:self
+                                                                                          action:@selector(dismissChatUI)];
+       
         UINavigationController *chatController = [[UINavigationController alloc] initWithRootViewController: viewController];
+        chatController.navigationBar.tintColor = themeColor;
+        
         [RCTPresentedViewController() presentViewController:chatController animated:YES completion:nil];
     });
 }
