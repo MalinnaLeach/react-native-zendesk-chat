@@ -153,6 +153,9 @@ RCT_EXPORT_METHOD(startChat:(NSDictionary *)options) {
         UIColor *themeColor;
         if (@available(iOS 11.0, *)) {
             themeColor = [UIColor colorNamed:@"madeBlack"];
+            if (themeColor == NULL) {
+                themeColor = [UIColor blackColor];
+            }
         } else {
             themeColor = [UIColor blackColor];
         }
@@ -182,10 +185,18 @@ RCT_EXPORT_METHOD(startChat:(NSDictionary *)options) {
             return;
         }
         
-        viewController.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"chevron_dowm"]
-                                                                                           style:UIBarButtonItemStylePlain
-                                                                                          target:self
-                                                                                          action:@selector(dismissChatUI)];
+        UIImage *dismissImage = [UIImage imageNamed:@"chevron_dowm"];
+        if (dismissImage == NULL) {
+            viewController.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle: options[@"localizedDismissButtonTitle"] ?: @"Close"
+                                                                                               style: UIBarButtonItemStylePlain
+                                                                                              target: self
+                                                                                              action: @selector(dismissChatUI)];
+        } else {
+            viewController.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithImage:dismissImage
+                                                                                               style:UIBarButtonItemStylePlain
+                                                                                              target:self
+                                                                                              action:@selector(dismissChatUI)];
+        }
        
         UINavigationController *chatController = [[UINavigationController alloc] initWithRootViewController: viewController];
         chatController.navigationBar.tintColor = themeColor;
