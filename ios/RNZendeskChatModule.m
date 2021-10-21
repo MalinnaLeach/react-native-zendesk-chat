@@ -150,21 +150,27 @@ RCT_EXPORT_METHOD(startChat:(NSDictionary *)options) {
 
     dispatch_sync(dispatch_get_main_queue(), ^{
 
-        UIColor *themeColor;
+        UIColor *themeColor = [UIColor blackColor];
         if (@available(iOS 11.0, *)) {
             themeColor = [UIColor colorNamed:@"madeBlack"];
             if (themeColor == NULL) {
                 themeColor = [UIColor blackColor];
             }
-        } else {
-            themeColor = [UIColor blackColor];
+        }
+        
+        UIColor *primaryColor = [UIColor blackColor];
+        if (@available(iOS 11.0, *)) {
+            primaryColor = [UIColor colorNamed:@"zendeskTintColor"];
+            if (primaryColor == NULL) {
+                primaryColor = [UIColor blackColor];
+            }
         }
         
         ZDKChat.instance.configuration = [self applyVisitorInfo:options
                                                      intoConfig: _visitorAPIConfig ?: [[ZDKChatAPIConfiguration alloc] init]];
 
         ZDKChatConfiguration * chatConfig = [self chatConfigurationFromConfig:options];
-        [ZDKCommonTheme currentTheme].primaryColor = themeColor;
+        [ZDKCommonTheme currentTheme].primaryColor = primaryColor;
 
         NSError *error = nil;
         NSArray *engines = @[
@@ -197,7 +203,6 @@ RCT_EXPORT_METHOD(startChat:(NSDictionary *)options) {
                                                                                               target:self
                                                                                               action:@selector(dismissChatUI)];
         }
-       
         UINavigationController *chatController = [[UINavigationController alloc] initWithRootViewController: viewController];
         chatController.navigationBar.tintColor = themeColor;
         
