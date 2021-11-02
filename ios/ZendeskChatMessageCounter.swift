@@ -109,6 +109,14 @@ final class ZendeskChatMessageCounter: RCTEventEmitter, NotificationCenterObserv
         callback([numberOfUnreadMessages])
     }
     
+    @objc
+    func isChatActive(_ callback: RCTResponseSenderBlock) {
+        debugPrint("\(#file) - \(#function)")
+        debugPrint("chat instance: \(Chat.instance.debugDescription)")
+        let isChating = Chat.instance?.chatProvider.chatState.isChatting
+        callback([isChating ?? false])
+    }
+    
     // MARK: Message counter
     func startMessageCounterIfNeeded() {
         updateLastSeenMessage()

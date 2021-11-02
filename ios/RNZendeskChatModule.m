@@ -205,6 +205,7 @@ RCT_EXPORT_METHOD(startChat:(NSDictionary *)options) {
         }
         UINavigationController *chatController = [[UINavigationController alloc] initWithRootViewController: viewController];
         chatController.navigationBar.tintColor = themeColor;
+        chatController.modalPresentationStyle = UIModalPresentationFullScreen;
         
         [RCTPresentedViewController() presentViewController:chatController animated:YES completion:nil];
     });
