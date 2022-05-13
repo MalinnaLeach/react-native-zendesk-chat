@@ -32,3 +32,13 @@ project.xcworkspace
 # OSX
 #
 .DS_Store
+
+# Yarn
+#
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
